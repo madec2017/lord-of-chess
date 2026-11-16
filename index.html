@@ -56,6 +56,22 @@
   .left-panel,.selection{display:none!important}
   .topbar{display:none!important}
   .bottom-bar{display:none!important}
+  #play-ui{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(238,233,220,.16);border-radius:13px;background:rgba(16,19,20,.86);backdrop-filter:blur(12px);box-shadow:0 10px 32px rgba(0,0,0,.24);user-select:none}
+  .turn-pill{display:flex;align-items:center;gap:9px;min-height:32px;padding:0 9px;white-space:nowrap}
+  #turn-dot{width:10px;height:10px;flex:none;border-radius:50%;background:#eee6d3;border:1px solid rgba(255,255,255,.55);box-shadow:0 0 12px rgba(238,230,211,.22)}
+  #turn-dot.black{background:#242827;border-color:#747771;box-shadow:0 0 12px rgba(255,255,255,.07)}
+  #game-status{font:500 14px Georgia,serif;letter-spacing:.025em;color:#eee9dc}
+  .play-button{min-height:32px;padding:0 11px;border:1px solid rgba(238,233,220,.14);border-radius:8px;background:rgba(255,255,255,.045);color:#d8d5cc;font:10px Georgia,serif;letter-spacing:.06em;cursor:pointer;transition:background .16s,border-color .16s,color .16s}
+  .play-button:hover:not(:disabled){background:rgba(212,183,123,.13);border-color:rgba(212,183,123,.45);color:#f0dfb8}
+  .play-button:disabled{opacity:.42;cursor:default}
+  #play-hint{position:fixed;left:50%;bottom:17px;transform:translateX(-50%);z-index:5;pointer-events:none;color:rgba(238,233,220,.62);font:italic 12px Georgia,serif;letter-spacing:.035em;text-shadow:0 2px 8px rgba(0,0,0,.7);white-space:nowrap}
+  #promotion-dialog[hidden]{display:none}
+  #promotion-dialog{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+  .promotion-card{min-width:270px;padding:18px;border:1px solid rgba(238,233,220,.18);border-radius:14px;background:rgba(17,20,20,.96);box-shadow:0 22px 70px rgba(0,0,0,.45);text-align:center}
+  .promotion-title{display:block;margin-bottom:14px;color:#d8c59c;font:italic 16px Georgia,serif}
+  .promotion-options{display:flex;gap:7px}
+  .promotion-options .play-button{flex:1;padding:0 9px}
+  @media(max-width:560px){#play-ui{top:10px;gap:4px;padding:5px}.turn-pill{gap:6px;padding:0 5px}#game-status{font-size:12px}.play-button{min-height:30px;padding:0 8px;font-size:9px}#play-hint{bottom:10px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -85,6 +101,23 @@
     <div class="legend"><span class="legend-item"><i class="legend-dot"></i> Ivory / white side</span><span class="legend-item"><i class="legend-dot black"></i> Ebony / black side</span></div>
     <div class="hint-bottom">Standard starting position · 32 pieces<br>Shared wood-grain finish · two sides</div>
   </footer>
+  <div id="play-ui" aria-label="Local chess controls">
+    <div class="turn-pill"><span id="turn-dot" aria-hidden="true"></span><span id="game-status" aria-live="polite">White to move</span></div>
+    <button id="undo-move" class="play-button" type="button" disabled>Undo</button>
+    <button id="new-game" class="play-button" type="button">New game</button>
+  </div>
+  <div id="play-hint">Local game · select a piece, then a highlighted square</div>
+  <div id="promotion-dialog" role="dialog" aria-modal="true" aria-labelledby="promotion-title" hidden>
+    <div class="promotion-card">
+      <span class="promotion-title" id="promotion-title">Promote pawn to</span>
+      <div class="promotion-options">
+        <button class="play-button" type="button" data-promotion="q">Queen</button>
+        <button class="play-button" type="button" data-promotion="r">Rook</button>
+        <button class="play-button" type="button" data-promotion="b">Bishop</button>
+        <button class="play-button" type="button" data-promotion="n">Knight</button>
+      </div>
+    </div>
+  </div>
 </div>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
@@ -119,7 +152,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/STLLoader.js';
 import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { Chess } from 'https://esm.sh/chess.js@1.4.0';
 
+const chessGame=new Chess();
 const stage=document.getElementById('stage');
 const scene=new THREE.Scene(); scene.background=new THREE.Color('#111515');
 scene.fog=new THREE.FogExp2('#111515',0.015);
@@ -179,8 +214,10 @@ const piecesMeta={
  pawn:{name:'Pawn',icon:'♙',desc:'The simplest silhouette: a rounded head on a slender stem and stepped base.'}
 };
 const allPieces=[];
+const pieceBySquare=new Map();
+const fileNames='abcdefgh';
 function buildPiece(type,tone,x,z){
- const group=new THREE.Group();group.position.set(x,type==='knight' ? .065 : .05,z);group.userData={type,tone};scene.add(group);const mat=mats[tone].main,detail=mats[tone].detail,inset=mats[tone].inset;
+ const group=new THREE.Group();group.position.set(x,type==='knight' ? .065 : .05,z);group.userData={type,tone,square:null,baseY:type==='knight'?.065:.05};scene.add(group);const mat=mats[tone].main,detail=mats[tone].detail,inset=mats[tone].inset;
  // thin, beveled plinth common to the entire set
  if(type!=='knight')turned(group,[[0,.015],[.62,.015],[.67,.045],[.67,.115],[.63,.15],[.58,.17],[0,.17]],mat);
  const model=new THREE.Group();group.add(model);
@@ -241,6 +278,7 @@ const names=Object.keys(piecesMeta);
 const square=1.95,boardSize=square*8,frameWidth=.58,boardOuter=boardSize+frameWidth*2;
 const fileX=Array.from({length:8},(_,file)=>(file-3.5)*square);
 const rankZ=Array.from({length:8},(_,rank)=>(3.5-rank)*square);
+function squareWorld(squareName){const file=fileNames.indexOf(squareName[0]),rank=Number(squareName[1])-1;return{x:fileX[file],z:rankZ[rank]}}
 // Full 8×8 board with alternating squares, a solid support, and a raised walnut frame.
 const board=new THREE.Group();scene.add(board);
 const tileMats=[new THREE.MeshStandardMaterial({color:0x373936,roughness:.68}),new THREE.MeshStandardMaterial({color:0xaaa18d,roughness:.64})];
@@ -254,20 +292,29 @@ const boardWoodTexture=makeBoardWoodTexture();
 const woodMat=new THREE.MeshPhysicalMaterial({map:boardWoodTexture,bumpMap:boardWoodTexture,bumpScale:.018,roughness:.25,metalness:.025,clearcoat:.42,clearcoatRoughness:.18});
 const supportMat=new THREE.MeshStandardMaterial({color:0x382719,roughness:.6});
 const support=new THREE.Mesh(new THREE.BoxGeometry(boardOuter+.12,.26,boardOuter+.12),supportMat);support.position.y=-.12;support.receiveShadow=true;support.castShadow=true;board.add(support);
+const boardSquares=new Map();
 for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
- const sq=new THREE.Mesh(new THREE.BoxGeometry(square,.16,square),tileMats[(rank+file)%2]);sq.position.set(fileX[file],-.015,rankZ[rank]);sq.receiveShadow=true;sq.castShadow=true;board.add(sq);
+ const sq=new THREE.Mesh(new THREE.BoxGeometry(square,.16,square),tileMats[(rank+file)%2]);sq.position.set(fileX[file],-.015,rankZ[rank]);sq.receiveShadow=true;sq.castShadow=true;
+ const squareName=`${fileNames[file]}${rank+1}`;sq.userData.square=squareName;boardSquares.set(squareName,sq);board.add(sq);
 }
 const railY=0,railHeight=.22,railOffset=boardSize/2+frameWidth/2;
 function addWoodRail(w,h,d,x,y,z){const rail=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),woodMat);rail.position.set(x,y,z);rail.castShadow=true;rail.receiveShadow=true;board.add(rail)}
 addWoodRail(boardOuter,railHeight,frameWidth,0,railY,railOffset);addWoodRail(boardOuter,railHeight,frameWidth,0,railY,-railOffset);
 addWoodRail(frameWidth,railHeight,boardSize,railOffset,railY,0);addWoodRail(frameWidth,railHeight,boardSize,-railOffset,railY,0);
-// Standard chess starting position, viewed from White's side. Rank 1 is nearest the viewer.
-const backRank=['rook','knight','bishop','queen','king','bishop','knight','rook'];
-for(let file=0;file<8;file++){
- const x=fileX[file];
- buildPiece(backRank[file],'white',x,rankZ[0]);buildPiece('pawn','white',x,rankZ[1]);
- buildPiece('pawn','black',x,rankZ[6]);buildPiece(backRank[file],'black',x,rankZ[7]);
+// Create the live models from chess.js state. Algebraic rank 1 is nearest White.
+const modelTypeByCode={p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
+function removePieceGroup(group){scene.remove(group);group.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()});const i=allPieces.indexOf(group);if(i>=0)allPieces.splice(i,1)}
+function rebuildPiecesFromGame(){
+ for(const group of [...allPieces])removePieceGroup(group);
+ pieceBySquare.clear();
+ const rows=chessGame.board();
+ for(let row=0;row<8;row++)for(let file=0;file<8;file++){
+  const piece=rows[row][file];if(!piece)continue;
+  const squareName=`${fileNames[file]}${8-row}`,pos=squareWorld(squareName),tone=piece.color==='w'?'white':'black';
+  const group=buildPiece(modelTypeByCode[piece.type],tone,pos.x,pos.z);group.userData.square=squareName;pieceBySquare.set(squareName,group);
+ }
 }
+rebuildPiecesFromGame();
 const pieceList=document.getElementById('pieceList');
 const pieceCounts={king:2,queen:2,bishop:4,knight:4,rook:4,pawn:16};
 for(const type of names){const b=document.createElement('button');b.className='piece-btn'+(type==='king'?' active':'');b.dataset.type=type;b.innerHTML=`<span class="piece-glyph">${piecesMeta[type].icon}</span><span class="piece-name">${piecesMeta[type].name}</span><span class="piece-count">×${pieceCounts[type]}</span>`;pieceList.appendChild(b);b.addEventListener('click',()=>{selectedType=type;updateSelection();focusPiece();});}
@@ -280,8 +327,57 @@ function focusPiece(){if(!selectedGroup)return;const p=selectedGroup.position;co
 document.getElementById('focusBtn').addEventListener('click',focusPiece);
 document.getElementById('resetBtn').addEventListener('click',()=>{controls.target.set(0,1.15,0);camera.position.set(0,27.1,12.7);controls.update()});
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let downPos=null;
+let selectedSquare=null,selectedLegalMoves=[],pendingPromotion=null;
+const highlightMeshes=[];
+let animationGeneration=0,activeAnimations=0;
+const statusNode=document.getElementById('game-status'),turnDot=document.getElementById('turn-dot'),undoButton=document.getElementById('undo-move'),promotionDialog=document.getElementById('promotion-dialog');
+function clearHighlights(){for(const item of highlightMeshes){scene.remove(item);item.geometry.dispose();item.material.dispose()}highlightMeshes.length=0}
+function addSquareWash(squareName){const p=squareWorld(squareName),m=new THREE.Mesh(new THREE.PlaneGeometry(square*.94,square*.94),new THREE.MeshBasicMaterial({color:0xd4b77b,transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.set(p.x,.071,p.z);m.renderOrder=2;scene.add(m);highlightMeshes.push(m)}
+function addMoveMarker(squareName,isCapture){const p=squareWorld(squareName);const geo=isCapture?new THREE.TorusGeometry(.67,.04,8,32):new THREE.CircleGeometry(.17,28);const mat=new THREE.MeshBasicMaterial({color:0xd8bd83,transparent:true,opacity:isCapture?.82:.72,depthWrite:false,side:THREE.DoubleSide});const m=new THREE.Mesh(geo,mat);m.rotation.x=-Math.PI/2;m.position.set(p.x,.076,p.z);m.renderOrder=3;scene.add(m);highlightMeshes.push(m)}
+function drawSelection(){clearHighlights();if(!selectedSquare)return;addSquareWash(selectedSquare);for(const move of selectedLegalMoves)addMoveMarker(move.to,Boolean(move.captured)||move.flags.includes('e'))}
+function clearSelection(){selectedSquare=null;selectedLegalMoves=[];drawSelection()}
+function currentTone(){return chessGame.turn()==='w'?'white':'black'}
+function updateGameStatus(){
+ let text;
+ if(chessGame.isCheckmate())text=`Checkmate · ${chessGame.turn()==='w'?'Black':'White'} wins`;
+ else if(chessGame.isStalemate())text='Draw · stalemate';
+ else if(chessGame.isThreefoldRepetition())text='Draw · threefold repetition';
+ else if(chessGame.isInsufficientMaterial())text='Draw · insufficient material';
+ else if(chessGame.isDraw())text='Draw · 50-move rule';
+ else text=`${chessGame.turn()==='w'?'White':'Black'} to move${chessGame.isCheck()?' · check':''}`;
+ statusNode.textContent=text;turnDot.classList.toggle('black',chessGame.turn()==='b');undoButton.disabled=!chessGame.history().length||activeAnimations>0;
+}
+function selectSquare(squareName){const piece=pieceBySquare.get(squareName);if(!piece||piece.userData.tone!==currentTone()){clearSelection();return}selectedSquare=squareName;selectedLegalMoves=chessGame.moves({square:squareName,verbose:true});drawSelection()}
+function cancelAnimations(){animationGeneration++;activeAnimations=0}
+function animatePieceTo(group,destination,onComplete){const target=squareWorld(destination),start=group.position.clone(),baseY=group.userData.baseY,id=animationGeneration,began=performance.now();activeAnimations++;updateGameStatus();function frame(now){if(id!==animationGeneration)return;const t=Math.min(1,(now-began)/230),e=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;group.position.x=start.x+(target.x-start.x)*e;group.position.z=start.z+(target.z-start.z)*e;group.position.y=baseY+Math.sin(t*Math.PI)*.28;if(t<1)requestAnimationFrame(frame);else{group.position.set(target.x,baseY,target.z);if(onComplete)onComplete();activeAnimations=Math.max(0,activeAnimations-1);updateGameStatus()}}requestAnimationFrame(frame)}
+function animateCaptured(group){const id=animationGeneration,began=performance.now(),baseY=group.userData.baseY;activeAnimations++;function frame(now){if(id!==animationGeneration)return;const t=Math.min(1,(now-began)/190);group.scale.setScalar(1-t);group.position.y=baseY-.45*t;if(t<1)requestAnimationFrame(frame);else{removePieceGroup(group);activeAnimations=Math.max(0,activeAnimations-1);updateGameStatus()}}requestAnimationFrame(frame)}
+function closePromotion(){promotionDialog.hidden=true;pendingPromotion=null}
+function showPromotion(to){pendingPromotion={from:selectedSquare,to};promotionDialog.hidden=false}
+function commitMove(to,promotion){
+ if(!selectedSquare||activeAnimations)return;
+ const from=selectedSquare,chosen=selectedLegalMoves.find(m=>m.to===to&&(!m.promotion||m.promotion===promotion));
+ if(!chosen)return;
+ if(chosen.promotion&&!promotion){showPromotion(to);return}
+ const movingGroup=pieceBySquare.get(from),movingTone=currentTone();
+ const captureSquare=chosen.flags.includes('e')?`${to[0]}${from[1]}`:to,capturedGroup=pieceBySquare.get(captureSquare);
+ let rookGroup=null,rookFrom=null,rookTo=null;
+ if(chosen.flags.includes('k')||chosen.flags.includes('q')){const rank=chosen.color==='w'?'1':'8';rookFrom=`${chosen.flags.includes('k')?'h':'a'}${rank}`;rookTo=`${chosen.flags.includes('k')?'f':'d'}${rank}`;rookGroup=pieceBySquare.get(rookFrom)}
+ let move;try{move=chessGame.move({from,to,...(promotion?{promotion}:{})})}catch(error){console.warn('Rejected chess move',error);return}
+ pieceBySquare.delete(from);pieceBySquare.delete(captureSquare);pieceBySquare.delete(to);
+ if(capturedGroup)animateCaptured(capturedGroup);
+ if(!movingGroup){rebuildPiecesFromGame();return}
+ if(move.promotion){pieceBySquare.set(to,movingGroup);movingGroup.userData.square=to;animatePieceTo(movingGroup,to,()=>{removePieceGroup(movingGroup);const pos=squareWorld(to),promoted=buildPiece(modelTypeByCode[move.promotion],movingTone,pos.x,pos.z);promoted.userData.square=to;pieceBySquare.set(to,promoted)})}
+ else{movingGroup.userData.square=to;pieceBySquare.set(to,movingGroup);animatePieceTo(movingGroup,to)}
+ if(rookGroup){pieceBySquare.delete(rookFrom);rookGroup.userData.square=rookTo;pieceBySquare.set(rookTo,rookGroup);animatePieceTo(rookGroup,rookTo)}
+ closePromotion();clearSelection();updateGameStatus();
+}
+function handleSquareClick(squareName,clickedPiece){if(!squareName||promotionDialog.hidden===false||activeAnimations||chessGame.isGameOver())return;if(selectedSquare){const targetMove=selectedLegalMoves.find(m=>m.to===squareName);if(targetMove){if(targetMove.promotion)showPromotion(squareName);else commitMove(squareName);return}}if(clickedPiece&&clickedPiece.userData.tone===currentTone()){selectSquare(squareName);return}clearSelection()}
 renderer.domElement.addEventListener('pointerdown',e=>{downPos={x:e.clientX,y:e.clientY}});
-renderer.domElement.addEventListener('pointerup',e=>{if(!downPos||Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5)return;const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(allPieces.flatMap(g=>g.userData.hitTargets),false)[0];if(hit){const root=hit.object.userData.root;selectedType=root.userData.type;selectedTone=root.userData.tone;updateSelection()}});
+renderer.domElement.addEventListener('pointerup',e=>{if(!downPos||Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5){downPos=null;return}downPos=null;const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);raycaster.setFromCamera(pointer,camera);const pieceHits=raycaster.intersectObjects(allPieces.flatMap(g=>g.userData.hitTargets),false);if(pieceHits.length){const group=pieceHits[0].object.userData.root;handleSquareClick(group.userData.square,group);return}const tileHits=raycaster.intersectObjects([...boardSquares.values()],false);if(tileHits.length)handleSquareClick(tileHits[0].object.userData.square,null)});
+document.getElementById('new-game').addEventListener('click',()=>{cancelAnimations();chessGame.reset();closePromotion();clearSelection();rebuildPiecesFromGame();updateGameStatus()});
+undoButton.addEventListener('click',()=>{if(!chessGame.history().length)return;cancelAnimations();chessGame.undo();closePromotion();clearSelection();rebuildPiecesFromGame();updateGameStatus()});
+document.querySelectorAll('[data-promotion]').forEach(button=>button.addEventListener('click',()=>{if(!pendingPromotion)return;const to=pendingPromotion.to;const code=button.dataset.promotion;promotionDialog.hidden=true;commitMove(to,code)}));
+updateGameStatus();
 const clock=new THREE.Clock();
 function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
