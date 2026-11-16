@@ -303,7 +303,7 @@ addWoodRail(boardOuter,railHeight,frameWidth,0,railY,railOffset);addWoodRail(boa
 addWoodRail(frameWidth,railHeight,boardSize,railOffset,railY,0);addWoodRail(frameWidth,railHeight,boardSize,-railOffset,railY,0);
 function makeCoordinateMaterial(glyph){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d');
- const isRank=/^[1-8]$/.test(glyph);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`bold ${isRank?100:86}px Georgia, "Times New Roman", serif`;ctx.lineJoin='round';ctx.lineWidth=isRank?8:5;ctx.strokeStyle=isRank?'rgba(232,214,178,.96)':'rgba(43,27,16,.76)';ctx.strokeText(glyph,64,66);ctx.fillStyle=isRank?'#17120d':'#ead9b3';ctx.fillText(glyph,64,62);
+	ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 100px Georgia, "Times New Roman", serif';ctx.lineJoin='round';ctx.lineWidth=8;ctx.strokeStyle='rgba(238,220,185,.98)';ctx.strokeText(glyph,64,66);ctx.fillStyle='#100d08';ctx.fillText(glyph,64,62);
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=8;
  return new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide,toneMapped:false});
 }
