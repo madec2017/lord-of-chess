@@ -272,10 +272,10 @@ function buildPiece(type,tone,x,z){
   const ring=mesh(new THREE.TorusGeometry(ringRadius,.018,8,64),detail,model);ring.rotation.x=Math.PI/2;ring.position.y=ringY;
  }
  group.userData.hitTargets=[];group.traverse(o=>{if(o.isMesh){o.userData.root=group;group.userData.hitTargets.push(o)}});
- allPieces.push(group);return group;
+	 allPieces.push(group);return group;
 }
 const names=Object.keys(piecesMeta);
-const square=1.95,boardSize=square*8,frameWidth=.58,boardOuter=boardSize+frameWidth*2;
+const square=1.95,boardSize=square*8,frameWidth=.66,boardOuter=boardSize+frameWidth*2;
 const fileX=Array.from({length:8},(_,file)=>(file-3.5)*square);
 const rankZ=Array.from({length:8},(_,rank)=>(3.5-rank)*square);
 function squareWorld(squareName){const file=fileNames.indexOf(squareName[0]),rank=Number(squareName[1])-1;return{x:fileX[file],z:rankZ[rank]}}
@@ -301,6 +301,18 @@ const railY=0,railHeight=.22,railOffset=boardSize/2+frameWidth/2;
 function addWoodRail(w,h,d,x,y,z){const rail=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),woodMat);rail.position.set(x,y,z);rail.castShadow=true;rail.receiveShadow=true;board.add(rail)}
 addWoodRail(boardOuter,railHeight,frameWidth,0,railY,railOffset);addWoodRail(boardOuter,railHeight,frameWidth,0,railY,-railOffset);
 addWoodRail(frameWidth,railHeight,boardSize,railOffset,railY,0);addWoodRail(frameWidth,railHeight,boardSize,-railOffset,railY,0);
+function makeCoordinateMaterial(glyph){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d');
+ ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 86px Georgia, "Times New Roman", serif';ctx.lineJoin='round';ctx.lineWidth=5;ctx.strokeStyle='rgba(43,27,16,.76)';ctx.strokeText(glyph,64,66);ctx.fillStyle='#ead9b3';ctx.fillText(glyph,64,62);
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=8;
+ return new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide,toneMapped:false});
+}
+const coordinateMaterials=new Map();
+function coordinateMaterial(glyph){if(!coordinateMaterials.has(glyph))coordinateMaterials.set(glyph,makeCoordinateMaterial(glyph));return coordinateMaterials.get(glyph)}
+function addCoordinateLabel(glyph,x,z,flipForOppositeSide=false){const label=new THREE.Mesh(new THREE.PlaneGeometry(.46,.46),coordinateMaterial(glyph));label.rotation.set(-Math.PI/2,0,flipForOppositeSide?Math.PI:0);label.position.set(x,railY+railHeight/2+.003,z);label.renderOrder=4;board.add(label)}
+const frameCenter=boardSize/2+frameWidth/2;
+for(let file=0;file<8;file++){addCoordinateLabel(fileNames[file],fileX[file],frameCenter);addCoordinateLabel(fileNames[file],fileX[file],-frameCenter,true)}
+for(let rank=1;rank<=8;rank++){addCoordinateLabel(String(rank),-frameCenter,rankZ[rank-1]);addCoordinateLabel(String(rank),frameCenter,rankZ[rank-1],true)}
 // Create the live models from chess.js state. Algebraic rank 1 is nearest White.
 const modelTypeByCode={p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
 function removePieceGroup(group){scene.remove(group);group.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose()});const i=allPieces.indexOf(group);if(i>=0)allPieces.splice(i,1)}
