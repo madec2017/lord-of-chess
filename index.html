@@ -72,6 +72,35 @@
   .promotion-options{display:flex;gap:7px}
   .promotion-options .play-button{flex:1;padding:0 9px}
   @media(max-width:560px){#play-ui{top:10px;gap:4px;padding:5px}.turn-pill{gap:6px;padding:0 5px}#game-status{font-size:12px}.play-button{min-height:30px;padding:0 8px;font-size:9px}#play-hint{bottom:10px;font-size:11px}}
+
+  #friend-room-modal[hidden],#room-entry[hidden],#room-active[hidden],#room-share[hidden],#room-guest-pin[hidden],#room-color[hidden]{display:none!important}
+  #friend-room-modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:14px;background:rgba(5,7,7,.66);backdrop-filter:blur(7px)}
+  .friend-room-card{position:relative;width:min(500px,calc(100vw - 28px));padding:30px;border:1px solid rgba(212,183,123,.35);border-radius:18px;background:linear-gradient(145deg,rgba(30,33,32,.98),rgba(14,17,17,.98));box-shadow:0 28px 90px rgba(0,0,0,.58);color:#e8e2d3;font-family:Georgia,"Times New Roman",serif}
+  .room-dismiss{position:absolute;right:14px;top:12px;width:34px;height:34px;border:1px solid rgba(238,233,220,.14);border-radius:50%;background:transparent;color:#d8d5cc;font:22px Georgia,serif;cursor:pointer}
+  .room-kicker{color:#d4b77b;font:700 9px Arial,sans-serif;letter-spacing:.2em}
+  .friend-room-card h2{margin:8px 0 7px;font:500 27px Georgia,serif;letter-spacing:.025em}
+  .room-intro{max-width:390px;margin:0 0 22px;color:#aaa99f;font:13px/1.55 Georgia,serif}
+  .room-primary{min-height:42px;padding:0 16px;border:1px solid rgba(212,183,123,.58);border-radius:9px;background:linear-gradient(135deg,#d6bc84,#b99a5e);color:#201b12;font:700 12px Georgia,serif;letter-spacing:.035em;cursor:pointer;transition:filter .15s,transform .15s}
+  .room-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  #room-create{width:100%}
+  .room-divider{display:flex;align-items:center;gap:10px;margin:18px 0 15px;color:#777c77;font:10px Arial,sans-serif;letter-spacing:.09em;text-transform:uppercase}
+  .room-divider:before,.room-divider:after{content:"";height:1px;flex:1;background:rgba(238,233,220,.1)}
+  .room-label{display:block;margin:0 0 7px;color:#aaa99f;font:700 9px Arial,sans-serif;letter-spacing:.16em}
+  .room-join-row{display:flex;gap:8px}
+  #room-pin-input{flex:1;min-width:0;height:42px;padding:0 12px;border:1px solid rgba(238,233,220,.18);border-radius:9px;background:rgba(0,0,0,.23);color:#f1e8d3;font:20px Georgia,serif;letter-spacing:.15em;outline:none}
+  #room-pin-input:focus{border-color:rgba(212,183,123,.75);box-shadow:0 0 0 3px rgba(212,183,123,.12)}
+  .room-error{min-height:18px;margin:10px 0 0;color:#e3a69b;font:12px/1.45 Georgia,serif}
+  .room-share{display:grid;grid-template-columns:176px 1fr;align-items:center;gap:18px;padding:14px;border:1px solid rgba(238,233,220,.1);border-radius:13px;background:rgba(255,255,255,.035)}
+  #room-qr{display:block;width:176px;height:176px;max-width:100%;padding:7px;border-radius:8px;background:#fffdf8}
+  .room-pin-stack strong{display:block;margin:3px 0 10px;color:#f2dfb3;font:700 29px Georgia,serif;letter-spacing:.12em}
+  .room-pin-stack p{margin:0 0 13px;color:#a8aaa2;font:12px/1.5 Georgia,serif}
+  .room-copy{min-height:35px}
+  .room-guest-pin{margin:0 0 10px;color:#aaa99f;font:11px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+  .room-guest-pin strong{color:#f2dfb3;font:700 17px Georgia,serif;letter-spacing:.12em}
+  .room-status{margin:17px 0 0;padding:12px 13px;border:1px solid rgba(238,233,220,.1);border-radius:9px;background:rgba(0,0,0,.16);color:#d5d2c8;font:13px/1.45 Georgia,serif}
+  .room-color{margin:10px 0 0;color:#d4b77b;font:12px Georgia,serif}
+  .room-end{margin-top:14px;padding:8px 0;border:0;background:none;color:#a9aaa3;font:11px Georgia,serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+  @media(max-width:520px){.friend-room-card{padding:25px 18px 20px}.friend-room-card h2{font-size:24px}.room-intro{font-size:12px}.room-share{grid-template-columns:1fr;justify-items:center;text-align:center}.room-pin-stack .room-label{text-align:center}.room-pin-stack strong{font-size:27px}.room-pin-stack p{max-width:240px}.room-join-row{gap:6px}#room-pin-input{width:100px;letter-spacing:.1em}#friend-room-open{white-space:nowrap}}
 </style>
 </head>
 <body>
@@ -105,6 +134,7 @@
     <div class="turn-pill"><span id="turn-dot" aria-hidden="true"></span><span id="game-status" aria-live="polite">White to move</span></div>
     <button id="undo-move" class="play-button" type="button" disabled>Undo</button>
     <button id="new-game" class="play-button" type="button">New game</button>
+    <button id="friend-room-open" class="play-button" type="button" aria-haspopup="dialog">Friend room</button>
   </div>
   <div id="play-hint">Local game · select a piece, then a highlighted square</div>
   <div id="promotion-dialog" role="dialog" aria-modal="true" aria-labelledby="promotion-title" hidden>
@@ -153,8 +183,12 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/exampl
 import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/STLLoader.js';
 import { mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { Chess } from 'https://esm.sh/chess.js@1.4.0';
+import Peer from 'https://esm.sh/peerjs@1.5.5';
+import QRCode from 'https://esm.sh/qrcode@1.5.4';
 
 const chessGame=new Chess();
+const ROOM_PROTOCOL=1;
+const friendRoom={role:null,phase:'idle',pin:null,peer:null,conn:null,myColor:null,guestColor:null,revision:0,processingGuestMove:false,applyingHostState:false,pendingRemoteMove:null,timer:null};
 const stage=document.getElementById('stage');
 const scene=new THREE.Scene(); scene.background=new THREE.Color('#111515');
 scene.fog=new THREE.FogExp2('#111515',0.015);
@@ -337,7 +371,7 @@ updateSelection();
 document.querySelectorAll('.finish-btn').forEach(b=>b.addEventListener('click',()=>{selectedTone=b.dataset.finish;updateSelection();focusPiece()}));
 function focusPiece(){if(!selectedGroup)return;const p=selectedGroup.position;controls.target.set(p.x,1.1,p.z);camera.position.set(p.x+3.4,4.7,p.z+6.5);controls.update()}
 document.getElementById('focusBtn').addEventListener('click',focusPiece);
-document.getElementById('resetBtn').addEventListener('click',()=>{controls.target.set(0,1.15,0);camera.position.set(0,27.1,12.7);controls.update()});
+document.getElementById('resetBtn').addEventListener('click',()=>{controls.target.set(0,1.15,0);camera.position.set(0,27.1,friendRoom.myColor==='b'?-12.7:12.7);controls.update()});
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let downPos=null;
 let selectedSquare=null,selectedLegalMoves=[],pendingPromotion=null;
 const highlightMeshes=[];
@@ -351,13 +385,27 @@ function clearSelection(){selectedSquare=null;selectedLegalMoves=[];drawSelectio
 function currentTone(){return chessGame.turn()==='w'?'white':'black'}
 function updateGameStatus(){
  let text;
- if(chessGame.isCheckmate())text=`Checkmate · ${chessGame.turn()==='w'?'Black':'White'} wins`;
+ const waiting=['creating','waiting','reserved','connecting'].includes(friendRoom.phase);
+ if(friendRoom.phase==='playing'&&!chessGame.isGameOver())text=chessGame.turn()===friendRoom.myColor?'Your move':"Friend's move";
+ else if(waiting)text=friendRoom.role==='guest'?'Joining room':'Waiting for friend';
+ else if(friendRoom.phase==='ended')text='Room ended';
+ else if(chessGame.isCheckmate())text=`Checkmate · ${chessGame.turn()==='w'?'Black':'White'} wins`;
  else if(chessGame.isStalemate())text='Draw · stalemate';
  else if(chessGame.isThreefoldRepetition())text='Draw · threefold repetition';
  else if(chessGame.isInsufficientMaterial())text='Draw · insufficient material';
  else if(chessGame.isDraw())text='Draw · 50-move rule';
  else text=`${chessGame.turn()==='w'?'White':'Black'} to move${chessGame.isCheck()?' · check':''}`;
- statusNode.textContent=text;turnDot.classList.toggle('black',chessGame.turn()==='b');undoButton.disabled=!chessGame.history().length||activeAnimations>0;
+ if(friendRoom.phase==='playing'&&chessGame.isGameOver())text+=' · match over';
+ statusNode.textContent=text;
+ turnDot.classList.toggle('black',chessGame.turn()==='b');
+ undoButton.disabled=!chessGame.history().length||activeAnimations>0||friendRoom.phase==='playing';
+ const newGame=document.getElementById('new-game');
+ newGame.disabled=waiting||friendRoom.phase==='ended'||(friendRoom.phase==='playing'&&friendRoom.role!=='host');
+ const hint=document.getElementById('play-hint');
+ if(friendRoom.phase==='idle')hint.textContent='Local game · select a piece, then a highlighted square';
+ else if(friendRoom.phase==='playing')hint.textContent=`Friend room · you are ${friendRoom.myColor==='w'?'White':'Black'}`;
+ else if(waiting)hint.textContent=friendRoom.role==='guest'?'Connecting to your friend…':'Waiting for your friend to join…';
+ else hint.textContent='Friend room · close the room to return to local play';
 }
 function selectSquare(squareName){const piece=pieceBySquare.get(squareName);if(!piece||piece.userData.tone!==currentTone()){clearSelection();return}selectedSquare=squareName;selectedLegalMoves=chessGame.moves({square:squareName,verbose:true});drawSelection()}
 function cancelAnimations(){animationGeneration++;activeAnimations=0}
@@ -370,30 +418,351 @@ function commitMove(to,promotion){
  const from=selectedSquare,chosen=selectedLegalMoves.find(m=>m.to===to&&(!m.promotion||m.promotion===promotion));
  if(!chosen)return;
  if(chosen.promotion&&!promotion){showPromotion(to);return}
+ if(friendRoom.phase==='playing'&&friendRoom.role==='guest'&&!friendRoom.applyingHostState){
+  if(chessGame.turn()!==friendRoom.myColor||!friendRoom.conn?.open)return;
+  try{friendRoom.conn.send({type:'move-request',protocol:ROOM_PROTOCOL,revision:friendRoom.revision,from,to,promotion:promotion||null});setRoomStatus('Move sent · waiting for the room host…')}
+  catch(error){setRoomStatus('Connection interrupted. Your move was not sent.')}
+  closePromotion();clearSelection();return;
+ }
+ if(friendRoom.phase==='playing'&&friendRoom.role==='host'&&!friendRoom.processingGuestMove&&chessGame.turn()!==friendRoom.myColor)return;
  const movingGroup=pieceBySquare.get(from),movingTone=currentTone();
  const captureSquare=chosen.flags.includes('e')?`${to[0]}${from[1]}`:to,capturedGroup=pieceBySquare.get(captureSquare);
  let rookGroup=null,rookFrom=null,rookTo=null;
- if(chosen.flags.includes('k')||chosen.flags.includes('q')){const rank=chosen.color==='w'?'1':'8';rookFrom=`${chosen.flags.includes('k')?'h':'a'}${rank}`;rookTo=`${chosen.flags.includes('k')?'f':'d'}${rank}`;rookGroup=pieceBySquare.get(rookFrom)}
- let move;try{move=chessGame.move({from,to,...(promotion?{promotion}:{})})}catch(error){console.warn('Rejected chess move',error);return}
+ if(chosen.flags.includes('k')||chosen.flags.includes('q')){
+  const rank=chosen.color==='w'?'1':'8';
+  rookFrom=`${chosen.flags.includes('k')?'h':'a'}${rank}`;
+  rookTo=`${chosen.flags.includes('k')?'f':'d'}${rank}`;
+  rookGroup=pieceBySquare.get(rookFrom);
+ }
+ let move;
+ try{move=chessGame.move({from,to,...(promotion?{promotion}:{})})}
+ catch(error){console.warn('Rejected chess move',error);return}
  pieceBySquare.delete(from);pieceBySquare.delete(captureSquare);pieceBySquare.delete(to);
  if(capturedGroup)animateCaptured(capturedGroup);
  if(!movingGroup){rebuildPiecesFromGame();return}
- if(move.promotion){pieceBySquare.set(to,movingGroup);movingGroup.userData.square=to;animatePieceTo(movingGroup,to,()=>{removePieceGroup(movingGroup);const pos=squareWorld(to),promoted=buildPiece(modelTypeByCode[move.promotion],movingTone,pos.x,pos.z);promoted.userData.square=to;pieceBySquare.set(to,promoted)})}
- else{movingGroup.userData.square=to;pieceBySquare.set(to,movingGroup);animatePieceTo(movingGroup,to)}
+ if(move.promotion){
+  pieceBySquare.set(to,movingGroup);movingGroup.userData.square=to;
+  animatePieceTo(movingGroup,to,()=>{removePieceGroup(movingGroup);const pos=squareWorld(to),promoted=buildPiece(modelTypeByCode[move.promotion],movingTone,pos.x,pos.z);promoted.userData.square=to;pieceBySquare.set(to,promoted)})
+ }else{movingGroup.userData.square=to;pieceBySquare.set(to,movingGroup);animatePieceTo(movingGroup,to)}
  if(rookGroup){pieceBySquare.delete(rookFrom);rookGroup.userData.square=rookTo;pieceBySquare.set(rookTo,rookGroup);animatePieceTo(rookGroup,rookTo)}
  closePromotion();clearSelection();updateGameStatus();
+ if(friendRoom.phase==='playing'&&friendRoom.role==='host')publishRoomMove({from,to,promotion:move.promotion||null});
 }
-function handleSquareClick(squareName,clickedPiece){if(!squareName||promotionDialog.hidden===false||activeAnimations||chessGame.isGameOver())return;if(selectedSquare){const targetMove=selectedLegalMoves.find(m=>m.to===squareName);if(targetMove){if(targetMove.promotion)showPromotion(squareName);else commitMove(squareName);return}}if(clickedPiece&&clickedPiece.userData.tone===currentTone()){selectSquare(squareName);return}clearSelection()}
+function handleSquareClick(squareName,clickedPiece){
+ if(!squareName||promotionDialog.hidden===false||activeAnimations||chessGame.isGameOver())return;
+ if(!['idle','playing'].includes(friendRoom.phase))return;
+ if(friendRoom.phase==='playing'&&chessGame.turn()!==friendRoom.myColor&&!friendRoom.processingGuestMove)return;
+ if(selectedSquare){const targetMove=selectedLegalMoves.find(m=>m.to===squareName);if(targetMove){if(targetMove.promotion)showPromotion(squareName);else commitMove(squareName);return}}
+ if(clickedPiece&&clickedPiece.userData.tone===currentTone()){selectSquare(squareName);return}
+ clearSelection();
+}
+
 renderer.domElement.addEventListener('pointerdown',e=>{downPos={x:e.clientX,y:e.clientY}});
 renderer.domElement.addEventListener('pointerup',e=>{if(!downPos||Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5){downPos=null;return}downPos=null;const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);raycaster.setFromCamera(pointer,camera);const pieceHits=raycaster.intersectObjects(allPieces.flatMap(g=>g.userData.hitTargets),false);if(pieceHits.length){const group=pieceHits[0].object.userData.root;handleSquareClick(group.userData.square,group);return}const tileHits=raycaster.intersectObjects([...boardSquares.values()],false);if(tileHits.length)handleSquareClick(tileHits[0].object.userData.square,null)});
-document.getElementById('new-game').addEventListener('click',()=>{cancelAnimations();chessGame.reset();closePromotion();clearSelection();rebuildPiecesFromGame();updateGameStatus()});
-undoButton.addEventListener('click',()=>{if(!chessGame.history().length)return;cancelAnimations();chessGame.undo();closePromotion();clearSelection();rebuildPiecesFromGame();updateGameStatus()});
+function resetBoardToStart(){cancelAnimations();chessGame.reset();closePromotion();clearSelection();rebuildPiecesFromGame();updateGameStatus()}
+document.getElementById('new-game').addEventListener('click',()=>{
+ if(friendRoom.phase==='playing'){
+  if(friendRoom.role!=='host')return;
+  resetBoardToStart();friendRoom.revision++;
+  try{friendRoom.conn?.send({type:'reset',protocol:ROOM_PROTOCOL,revision:friendRoom.revision,fen:chessGame.fen()})}catch(error){setRoomStatus('Could not send the rematch reset.')}
+  setRoomStatus('New game started. You keep your assigned color.');return;
+ }
+ if(friendRoom.phase!=='idle')return;
+ resetBoardToStart();
+});
+
+undoButton.addEventListener('click',()=>{if(friendRoom.phase==='playing'||!chessGame.history().length)return;cancelAnimations();chessGame.undo();closePromotion();clearSelection();rebuildPiecesFromGame();updateGameStatus()});
 document.querySelectorAll('[data-promotion]').forEach(button=>button.addEventListener('click',()=>{if(!pendingPromotion)return;const to=pendingPromotion.to;const code=button.dataset.promotion;promotionDialog.hidden=true;commitMove(to,code)}));
+const roomModalNode=document.getElementById('friend-room-modal');
+const roomEntryNode=document.getElementById('room-entry'),roomActiveNode=document.getElementById('room-active');
+const roomCreateButton=document.getElementById('room-create'),roomJoinButton=document.getElementById('room-join');
+const roomPinInput=document.getElementById('room-pin-input'),roomErrorNode=document.getElementById('room-error');
+const roomStatusNode=document.getElementById('room-status'),roomPinDisplay=document.getElementById('room-pin-display');
+const roomShareNode=document.getElementById('room-share'),roomGuestPinNode=document.getElementById('room-guest-pin');
+const roomGuestPinValue=document.getElementById('room-guest-pin-value'),roomColorNode=document.getElementById('room-color');
+const roomQrCanvas=document.getElementById('room-qr'),roomEndButton=document.getElementById('room-end');
+const friendRoomButton=document.getElementById('friend-room-open');
+
+function setRoomStatus(text){roomStatusNode.textContent=text}
+function updateRoomPanel(){
+ const active=friendRoom.phase!=='idle';
+ roomEntryNode.hidden=active;roomActiveNode.hidden=!active;
+ roomShareNode.hidden=!(friendRoom.role==='host'&&!!friendRoom.pin);
+ roomGuestPinNode.hidden=!(friendRoom.role==='guest'&&!!friendRoom.pin);
+ roomPinDisplay.textContent=friendRoom.pin||'';roomGuestPinValue.textContent=friendRoom.pin||'';
+ roomColorNode.hidden=friendRoom.phase!=='playing';
+ roomColorNode.textContent=friendRoom.myColor==='w'?'You are White · your friend is Black':'You are Black · your friend is White';
+ roomEndButton.textContent=friendRoom.role==='host'?'End room':'Leave room';
+ friendRoomButton.textContent=friendRoom.phase==='playing'?'Friend match':'Friend room';
+}
+function openRoomModal(){roomModalNode.hidden=false;updateRoomPanel();if(friendRoom.phase==='idle')roomPinInput.focus()}
+function clearRoomInviteFromUrl(){try{const u=new URL(location.href);u.searchParams.delete('room');history.replaceState({},'',u)}catch(error){}}
+function makeRoomPin(){const values=new Uint32Array(1);if(globalThis.crypto?.getRandomValues)crypto.getRandomValues(values);else values[0]=Math.floor(Math.random()*4294967295);return String(10000000+(values[0]%90000000))}
+function makeRoomInviteUrl(pin){const u=new URL(location.href);u.searchParams.set('room',pin);return u.toString()}
+function validSquareCode(value){return typeof value==='string'&&/^[a-h][1-8]$/.test(value)}
+function validRoomMessage(message){try{return !!message&&typeof message==='object'&&message.protocol===ROOM_PROTOCOL&&typeof message.type==='string'&&JSON.stringify(message).length<=2048}catch(error){return false}}
+function waitForPeerOpen(peer,timeoutMs=15000){
+ return new Promise((resolve,reject)=>{
+  let settled=false;const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error('PeerJS signaling timed out'))}},timeoutMs);
+  peer.on('open',id=>{if(settled)return;settled=true;clearTimeout(timer);resolve(id)});
+  peer.on('error',error=>{if(settled)return;settled=true;clearTimeout(timer);reject(error)});
+ });
+}
+function resetFriendRoomState(){
+ if(friendRoom.timer)clearTimeout(friendRoom.timer);
+ Object.assign(friendRoom,{role:null,phase:'idle',pin:null,peer:null,conn:null,myColor:null,guestColor:null,revision:0,processingGuestMove:false,applyingHostState:false,pendingRemoteMove:null,timer:null});
+}
+function failGuestJoin(message){
+ if(friendRoom.phase==='idle')return;
+ const conn=friendRoom.conn,peer=friendRoom.peer;resetFriendRoomState();
+ try{conn?.close()}catch(error){}try{if(peer&&!peer.destroyed)peer.destroy()}catch(error){}
+ roomErrorNode.textContent=message;roomErrorNode.style.color='';updateRoomPanel();updateGameStatus();
+}
+function setBoardPerspective(color){controls.target.set(0,1.15,0);camera.position.set(0,27.1,color==='b'?-12.7:12.7);controls.update()}
+
+async function createFriendRoom(){
+ if(friendRoom.phase!=='idle')return;
+ roomErrorNode.textContent='';Object.assign(friendRoom,{role:'host',phase:'creating',pin:null,myColor:null,guestColor:null,revision:0});
+ resetBoardToStart();
+ setRoomStatus('Creating a private room…');updateRoomPanel();updateGameStatus();
+ for(let attempt=0;attempt<6;attempt++){
+  const pin=makeRoomPin(),peer=new Peer(`loc-${pin}`);friendRoom.pin=pin;friendRoom.peer=peer;
+  peer.on('connection',conn=>handleIncomingRoomConnection(conn));
+  try{await waitForPeerOpen(peer);if(friendRoom.peer!==peer)return;break}
+  catch(error){
+   try{if(!peer.destroyed)peer.destroy()}catch(ignore){}
+   if(friendRoom.peer===peer){friendRoom.peer=null;friendRoom.pin=null}
+   if(error?.type==='unavailable-id'&&attempt<5)continue;
+   resetFriendRoomState();roomErrorNode.textContent=error?.type==='unavailable-id'?'Could not reserve a unique room code. Try again.':'Could not reach the room service. Check your connection and try again.';
+   updateRoomPanel();updateGameStatus();return;
+  }
+ }
+ if(!friendRoom.peer)return;
+ friendRoom.phase='waiting';updateRoomPanel();updateGameStatus();
+ try{await QRCode.toCanvas(roomQrCanvas,makeRoomInviteUrl(friendRoom.pin),{width:176,margin:1,color:{dark:'#17120d',light:'#fffdf8'}})}catch(error){setRoomStatus('Room is ready. QR unavailable here; copy the invite link instead.');return}
+ setRoomStatus('Room is ready · waiting for one friend to join.');
+}
+
+async function joinFriendRoom(){
+ if(friendRoom.phase!=='idle')return;
+ const pin=roomPinInput.value.trim();
+ if(!/^\d{8}$/.test(pin)){roomErrorNode.textContent='Enter the 8-digit room PIN.';roomPinInput.focus();return}
+ roomErrorNode.textContent='';Object.assign(friendRoom,{role:'guest',phase:'connecting',pin,myColor:null,guestColor:null,revision:0});
+ setRoomStatus('Connecting to the room…');updateRoomPanel();updateGameStatus();
+ const peer=new Peer();friendRoom.peer=peer;
+ try{await waitForPeerOpen(peer)}catch(error){failGuestJoin('Could not reach the room service. Check your connection and try again.');return}
+ if(friendRoom.peer!==peer)return;
+ peer.on('error',error=>{if(friendRoom.peer===peer&&error?.type==='peer-unavailable')failGuestJoin('No open room has that PIN. Check the code and try again.')});
+ let conn;
+ try{conn=peer.connect(`loc-${pin}`,{reliable:true,serialization:'json'})}catch(error){failGuestJoin('Could not connect to that room. Check the PIN.');return}
+ friendRoom.conn=conn;
+ friendRoom.timer=setTimeout(()=>{if(friendRoom.phase==='connecting')failGuestJoin('The room did not respond. It may be full or closed.')},18000);
+ conn.on('open',()=>{if(friendRoom.conn!==conn)return;try{conn.send({type:'join',protocol:ROOM_PROTOCOL});setRoomStatus('Connected · waiting for the host to start the match…')}catch(error){failGuestJoin('Could not send the join request.')}});
+ conn.on('data',message=>handleGuestRoomMessage(conn,message));
+ conn.on('close',()=>handleRoomConnectionClosed(conn));
+ conn.on('error',error=>{if(friendRoom.conn===conn&&friendRoom.phase==='connecting')failGuestJoin('Connection failed. Check the PIN and try again.')});
+}
+
+function rejectExtraRoomConnection(conn){
+ const deny=()=>{try{conn.send({type:'room-full',protocol:ROOM_PROTOCOL})}catch(error){}setTimeout(()=>{try{conn.close()}catch(error){}},180)};
+ if(conn.open)deny();else{conn.on('open',deny);setTimeout(()=>{if(!conn.open)try{conn.close()}catch(error){}},5000)}
+}
+function handleIncomingRoomConnection(conn){
+ if(friendRoom.role!=='host'||friendRoom.phase!=='waiting'||friendRoom.conn){rejectExtraRoomConnection(conn);return}
+ friendRoom.conn=conn;friendRoom.phase='reserved';friendRoom.pendingRemoteMove=null;updateRoomPanel();updateGameStatus();
+ setRoomStatus('A friend is connecting · reserving the second seat…');
+ friendRoom.timer=setTimeout(()=>{
+  if(friendRoom.conn===conn&&friendRoom.phase==='reserved'){
+   friendRoom.conn=null;friendRoom.phase='waiting';try{conn.close()}catch(error){}
+   setRoomStatus('No join confirmation arrived. The room is open again.');updateRoomPanel();updateGameStatus();
+  }
+ },16000);
+ conn.on('open',()=>{if(friendRoom.conn===conn&&friendRoom.phase==='reserved')setRoomStatus('Friend connected · confirming room access…')});
+ conn.on('data',message=>handleHostRoomMessage(conn,message));
+ conn.on('close',()=>handleRoomConnectionClosed(conn));
+ conn.on('error',error=>{if(friendRoom.conn===conn)setRoomStatus('Connection issue · waiting for the link to recover…')});
+}
+function sendRoomSync(conn=friendRoom.conn){
+ if(conn?.open)try{conn.send({type:'sync',protocol:ROOM_PROTOCOL,revision:friendRoom.revision,fen:chessGame.fen()})}catch(error){}
+}
+function publishRoomMove(move){
+ if(friendRoom.role!=='host'||friendRoom.phase!=='playing'||!friendRoom.conn?.open)return;
+ friendRoom.revision++;
+ try{friendRoom.conn.send({type:'state',protocol:ROOM_PROTOCOL,revision:friendRoom.revision,fen:chessGame.fen(),move});setRoomStatus('Match live · move confirmed.')}catch(error){setRoomStatus('Move saved here, but the connection was interrupted.')}
+}
+function rejectGuestMove(conn,message='That move is not legal. The board stays unchanged.'){
+ clearSelection();try{conn.send({type:'move-rejected',protocol:ROOM_PROTOCOL,revision:friendRoom.revision,fen:chessGame.fen(),message})}catch(error){}
+}
+function processGuestMoveRequest(conn,message){
+ if(conn!==friendRoom.conn||friendRoom.role!=='host'||friendRoom.phase!=='playing')return;
+ if(activeAnimations){
+  if(friendRoom.pendingRemoteMove)return;
+  const pending={conn,message};friendRoom.pendingRemoteMove=pending;
+  const retry=()=>{if(friendRoom.pendingRemoteMove!==pending)return;if(conn!==friendRoom.conn||friendRoom.phase!=='playing'){friendRoom.pendingRemoteMove=null;return}if(activeAnimations){setTimeout(retry,45);return}friendRoom.pendingRemoteMove=null;processGuestMoveRequest(conn,message)};
+  setTimeout(retry,45);return;
+ }
+ if(!validSquareCode(message.from)||!validSquareCode(message.to)){rejectGuestMove(conn);return}
+ if(message.revision!==friendRoom.revision){sendRoomSync(conn);return}
+ if(chessGame.turn()!==friendRoom.guestColor){sendRoomSync(conn);return}
+ const promotion=message.promotion??null;
+ if(promotion!==null&&!['q','r','b','n'].includes(promotion)){rejectGuestMove(conn);return}
+ selectSquare(message.from);
+ const candidates=selectedLegalMoves.filter(move=>move.to===message.to);
+ const chosen=promotion?candidates.find(move=>move.promotion===promotion):candidates.find(move=>!move.promotion);
+ if(!chosen){rejectGuestMove(conn);return}
+ friendRoom.processingGuestMove=true;
+ try{commitMove(message.to,promotion)}finally{friendRoom.processingGuestMove=false}
+}
+function handleHostRoomMessage(conn,message){
+ if(conn!==friendRoom.conn||!validRoomMessage(message))return;
+ if(message.type==='join'&&friendRoom.phase==='reserved'){
+  if(friendRoom.timer)clearTimeout(friendRoom.timer);
+  const bit=new Uint8Array(1);if(globalThis.crypto?.getRandomValues)crypto.getRandomValues(bit);else bit[0]=Math.floor(Math.random()*256);
+  friendRoom.myColor=(bit[0]&1)?'w':'b';friendRoom.guestColor=friendRoom.myColor==='w'?'b':'w';friendRoom.phase='playing';friendRoom.revision=0;
+  setBoardPerspective(friendRoom.myColor);
+  try{conn.send({type:'start',protocol:ROOM_PROTOCOL,fen:chessGame.fen(),revision:0,hostColor:friendRoom.myColor,guestColor:friendRoom.guestColor})}catch(error){friendRoom.phase='ended';setRoomStatus('Could not start the match. End the room and try again.')}
+  roomErrorNode.textContent='';setRoomStatus('Friend joined · the match is live.');updateRoomPanel();updateGameStatus();return;
+ }
+ if(message.type==='move-request'){processGuestMoveRequest(conn,message);return}
+ if(message.type==='leave'&&friendRoom.phase==='playing'){
+  friendRoom.phase='ended';friendRoom.pendingRemoteMove=null;setRoomStatus('Your friend left. This room is closed to new players.');
+  try{conn.send({type:'room-ended',protocol:ROOM_PROTOCOL})}catch(error){};try{conn.close()}catch(error){}
+  updateRoomPanel();updateGameStatus();
+ }
+}
+
+function loadRoomFen(fen,revision){
+ if(typeof fen!=='string'||fen.length>160)return false;
+ try{cancelAnimations();closePromotion();clearSelection();chessGame.load(fen)}catch(error){return false}
+ friendRoom.revision=revision;rebuildPiecesFromGame();updateGameStatus();return true;
+}
+function applyHostState(message){
+ if(message.revision<=friendRoom.revision)return;
+ const move=message.move;
+ if(message.revision!==friendRoom.revision+1||!move||!validSquareCode(move.from)||!validSquareCode(move.to)){
+  if(!loadRoomFen(message.fen,message.revision))setRoomStatus('Received a damaged board update. Leave and rejoin the room.');
+  return;
+ }
+ cancelAnimations();closePromotion();clearSelection();selectSquare(move.from);
+ const candidates=selectedLegalMoves.filter(candidate=>candidate.to===move.to);
+ const promotion=move.promotion??null;
+ const chosen=promotion?candidates.find(candidate=>candidate.promotion===promotion):candidates.find(candidate=>!candidate.promotion);
+ if(!chosen){if(!loadRoomFen(message.fen,message.revision))setRoomStatus('Could not sync the board. Leave and rejoin the room.');return}
+ friendRoom.applyingHostState=true;
+ try{commitMove(move.to,promotion)}finally{friendRoom.applyingHostState=false}
+ if(chessGame.fen()!==message.fen&&!loadRoomFen(message.fen,message.revision)){setRoomStatus('Could not sync the board. Leave and rejoin the room.');return}
+ friendRoom.revision=message.revision;setRoomStatus('Match live · board synchronized.');updateGameStatus();
+}
+function handleGuestRoomMessage(conn,message){
+ if(conn!==friendRoom.conn||!validRoomMessage(message))return;
+ if(message.type==='room-full'){failGuestJoin('This room already has two players. Ask your friend for a new room.');return}
+ if(message.type==='start'&&friendRoom.role==='guest'&&friendRoom.phase==='connecting'){
+  if(!['w','b'].includes(message.hostColor)||!['w','b'].includes(message.guestColor)||message.hostColor===message.guestColor||message.revision!==0){failGuestJoin('The host sent an invalid room setup.');return}
+  if(friendRoom.timer)clearTimeout(friendRoom.timer);
+  friendRoom.myColor=message.guestColor;friendRoom.guestColor=message.hostColor;friendRoom.phase='playing';
+  if(!loadRoomFen(message.fen,0)){failGuestJoin('The host sent an invalid chess position.');return}
+  setBoardPerspective(friendRoom.myColor);setRoomStatus('Friend joined · the match is live.');updateRoomPanel();updateGameStatus();return;
+ }
+ if(message.type==='state'&&friendRoom.phase==='playing'){applyHostState(message);return}
+ if(message.type==='sync'&&friendRoom.phase==='playing'){
+  if(message.revision>=friendRoom.revision){if(loadRoomFen(message.fen,message.revision))setRoomStatus('Board synchronized with the host.');else setRoomStatus('Could not sync the board. Leave and rejoin the room.')}
+  return;
+ }
+ if(message.type==='reset'&&friendRoom.phase==='playing'){
+  if(message.revision>friendRoom.revision&&loadRoomFen(message.fen,message.revision))setRoomStatus('New game · same assigned colors.');
+  return;
+ }
+ if(message.type==='move-rejected'){
+  if(typeof message.fen==='string'&&message.revision>=friendRoom.revision)loadRoomFen(message.fen,message.revision);
+  setRoomStatus(typeof message.message==='string'?message.message:'Move not accepted. Try again.');return;
+ }
+ if(message.type==='room-ended'){
+  friendRoom.phase='ended';friendRoom.pendingRemoteMove=null;setRoomStatus('The host ended this room.');updateRoomPanel();updateGameStatus();
+ }
+}
+function handleRoomConnectionClosed(conn){
+ if(conn!==friendRoom.conn)return;
+ friendRoom.conn=null;friendRoom.pendingRemoteMove=null;
+ if(friendRoom.role==='guest'&&friendRoom.phase==='connecting'){failGuestJoin('The host closed the room or the room became full.');return}
+ if(friendRoom.phase==='reserved'&&friendRoom.role==='host'){
+  if(friendRoom.timer)clearTimeout(friendRoom.timer);friendRoom.phase='waiting';setRoomStatus('Connection ended before joining. The room is open again.');updateRoomPanel();updateGameStatus();return;
+ }
+ if(friendRoom.phase==='playing'){
+  friendRoom.phase='ended';setRoomStatus('Your friend disconnected. This room will not admit a replacement player.');updateRoomPanel();updateGameStatus();
+ }
+}
+function finishFriendRoom(){
+ const conn=friendRoom.conn,peer=friendRoom.peer,role=friendRoom.role;
+ if(friendRoom.timer)clearTimeout(friendRoom.timer);
+ if(conn?.open)try{conn.send({type:role==='host'?'room-ended':'leave',protocol:ROOM_PROTOCOL})}catch(error){}
+ resetFriendRoomState();
+ try{conn?.close()}catch(error){}
+ if(peer&&!peer.destroyed)setTimeout(()=>{try{peer.destroy()}catch(error){}},120);
+ clearRoomInviteFromUrl();roomErrorNode.textContent='';roomModalNode.hidden=true;
+ resetBoardToStart();setBoardPerspective('w');updateRoomPanel();updateGameStatus();
+}
+
+friendRoomButton.addEventListener('click',openRoomModal);
+document.getElementById('friend-room-dismiss').addEventListener('click',()=>{roomModalNode.hidden=true});
+roomModalNode.addEventListener('click',event=>{if(event.target===roomModalNode)roomModalNode.hidden=true});
+document.getElementById('room-create').addEventListener('click',createFriendRoom);
+roomJoinButton.addEventListener('click',joinFriendRoom);
+roomPinInput.addEventListener('input',()=>{roomPinInput.value=roomPinInput.value.replace(/\D/g,'').slice(0,8)});
+roomPinInput.addEventListener('keydown',event=>{if(event.key==='Enter')joinFriendRoom()});
+roomEndButton.addEventListener('click',finishFriendRoom);
+document.getElementById('room-copy-link').addEventListener('click',async()=>{
+ if(!friendRoom.pin)return;const invite=makeRoomInviteUrl(friendRoom.pin);
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(invite);
+  else{const field=document.createElement('textarea');field.value=invite;document.body.append(field);field.select();const copied=document.execCommand('copy');field.remove();if(!copied)throw new Error('clipboard unavailable')}
+  setRoomStatus('Invite link copied. Share it with one friend.');
+ }catch(error){setRoomStatus('Copy failed · share the PIN shown above instead.')}
+});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!roomModalNode.hidden)roomModalNode.hidden=true});
+updateRoomPanel();
+const invitePinOnLoad=new URLSearchParams(location.search).get('room');
+if(/^\d{8}$/.test(invitePinOnLoad||'')){
+ roomPinInput.value=invitePinOnLoad;roomErrorNode.textContent='Your friend invited you. Join when you are ready.';roomErrorNode.style.color='#d4c6a2';openRoomModal();
+}
+
 updateGameStatus();
 const clock=new THREE.Clock();
 function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 setTimeout(()=>{const l=document.getElementById('loading');l.style.opacity='0';setTimeout(()=>l.remove(),550)},400);
 </script>
+<div id="friend-room-modal" role="dialog" aria-modal="true" aria-labelledby="friend-room-title" hidden>
+  <section class="friend-room-card">
+    <button id="friend-room-dismiss" class="room-dismiss" type="button" aria-label="Close friend room dialog">×</button>
+    <div class="room-kicker">LORD OF CHESS · PRIVATE MATCH</div>
+    <h2 id="friend-room-title">Play a friend</h2>
+    <p class="room-intro">Create a room and share its PIN or QR code. One friend can join; later attempts are refused.</p>
+    <div id="room-entry">
+      <button id="room-create" class="room-primary" type="button">Create friend room</button>
+      <div class="room-divider"><span>or join with a PIN</span></div>
+      <label class="room-label" for="room-pin-input">8-digit room PIN</label>
+      <div class="room-join-row">
+        <input id="room-pin-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}" placeholder="12345678" aria-label="8-digit room PIN">
+        <button id="room-join" class="room-primary" type="button">Join room</button>
+      </div>
+      <p id="room-error" class="room-error" role="status" aria-live="polite"></p>
+    </div>
+    <div id="room-active" hidden>
+      <div id="room-share" class="room-share" hidden>
+        <canvas id="room-qr" width="176" height="176" aria-label="QR code for this friend room"></canvas>
+        <div class="room-pin-stack">
+          <span class="room-label">INVITE PIN</span>
+          <strong id="room-pin-display">00000000</strong>
+          <p>Scan the code or share the invite link.</p>
+          <button id="room-copy-link" class="play-button room-copy" type="button">Copy invite link</button>
+        </div>
+      </div>
+      <p id="room-guest-pin" class="room-guest-pin" hidden>Room PIN <strong id="room-guest-pin-value"></strong></p>
+      <p id="room-status" class="room-status" aria-live="polite">Connecting…</p>
+      <p id="room-color" class="room-color" hidden></p>
+      <button id="room-end" class="room-end" type="button">End room</button>
+    </div>
+  </section>
+</div>
 </body>
 </html>
